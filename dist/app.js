@@ -1,9 +1,10 @@
 const $ = id => document.getElementById(id);
 const raw = $('raw-video'), cipher = $('cipher-video'), canvas = $('tracking-canvas');
+const localCanvas = $('local-tracking-canvas');
 const viewer = $('viewer'), viewerCanvas = $('viewer-canvas');
 const state = {
   catalog: [], scene: 0, data: null, ready: false, playing: false, loading: true,
-  token: 0, frame: -1, finished: false, scrubbing: false, resumeAfterScrub: false,
+  token: 0, frame: -1, rawFrame: -1, finished: false, scrubbing: false, resumeAfterScrub: false,
   view: null, idKey: null, focusedId: null, boxes: true, theater: false,
   completed: new Set(), positions: new Map(), cache: new Map(), controller: null,
 };
@@ -47,19 +48,19 @@ function updateTimeline() {
   });
 }
 
-// The live canvas contains annotations only. Its transparent pixels reveal the
-// encrypted video directly below it; the original video never supplies this view.
-function drawBoxes(target, frameIndex, { background = false } = {}) {
+// Each result uses the displayed frame of its own video as its background.
+// The two video decoders supply four synchronized views without extra streams.
+function drawFrame(target, source, frameIndex, tracked = true) {
   const ctx = target.getContext('2d');
   ctx.clearRect(0, 0, target.width, target.height);
-  if (!state.data || cipher.readyState < 2) return;
+  if (!state.data || source.readyState < 2) return;
   const { width, height, frames } = state.data;
   ctx.save();
   ctx.scale(target.width / width, target.height / height);
-  if (background) ctx.drawImage(cipher, 0, 0, width, height);
-  if (!state.boxes) { ctx.restore(); return; }
+  ctx.drawImage(source, 0, 0, width, height);
+  if (!tracked || !state.boxes) { ctx.restore(); return; }
   const labels = [];
-  for (const object of frames[frameIndex]) {
+  for (const object of frames[frameIndex] || []) {
     const [x, y, w, h] = object.bbox;
     const left = Math.max(0, x), top = Math.max(0, y);
     const right = Math.min(width, x + w), bottom = Math.min(height, y + h);
@@ -101,15 +102,26 @@ function drawBoxes(target, frameIndex, { background = false } = {}) {
 }
 
 function drawViewer() {
-  if (!viewer.open || !state.ready || state.frame < 0) return;
-  viewerCanvas.dataset.source = state.view === 'tracked' ? 'encrypted' : 'original';
-  if (state.view === 'tracked') {
-    drawBoxes(viewerCanvas, state.frame, { background: true });
-  } else if (raw.readyState >= 2) {
-    const ctx = viewerCanvas.getContext('2d');
-    ctx.clearRect(0, 0, viewerCanvas.width, viewerCanvas.height);
-    ctx.drawImage(raw, 0, 0, viewerCanvas.width, viewerCanvas.height);
-  }
+  if (!viewer.open || !state.ready) return;
+  const encrypted = state.view === 'cipher' || state.view === 'tracked';
+  const index = encrypted ? state.frame : state.rawFrame;
+  viewerCanvas.dataset.source = encrypted ? 'encrypted' : 'original';
+  viewerCanvas.dataset.frameId = String(index + 1);
+  drawFrame(viewerCanvas, encrypted ? cipher : raw, index, state.view === 'tracked' || state.view === 'local-tracked');
+}
+
+function frameAt(time) {
+  return Math.max(0, Math.min(state.data.frames.length - 1, Math.floor(time * state.data.fps + .0001)));
+}
+
+function paintLocal(time = raw.currentTime, force = false) {
+  if (!state.ready || !state.data || raw.readyState < 2) return;
+  const index = frameAt(time);
+  if (index === state.rawFrame && !force) return;
+  state.rawFrame = index;
+  drawFrame(localCanvas, raw, index);
+  localCanvas.dataset.frameId = String(index + 1);
+  if (state.view === 'raw' || state.view === 'local-tracked') drawViewer();
 }
 
 function updateFocus() {
@@ -120,12 +132,12 @@ function updateFocus() {
 
 function paint(time = cipher.currentTime, force = false) {
   if (!state.ready || !state.data || cipher.readyState < 2) return;
-  const index = Math.max(0, Math.min(state.data.frames.length - 1, Math.floor(time * state.data.fps + .0001)));
+  const index = frameAt(time);
   if (index === state.frame && !force) return;
   state.frame = index;
   const objects = state.data.frames[index];
   if (state.focusedId !== null && !objects.some(object => object.id === state.focusedId)) state.focusedId = null;
-  drawBoxes(canvas, index);
+  drawFrame(canvas, cipher, index);
   canvas.dataset.frameId = String(index + 1);
   canvas.dataset.source = 'encrypted';
   $('track-count').textContent = String(objects.length).padStart(2, '0');
@@ -155,6 +167,7 @@ function paint(time = cipher.currentTime, force = false) {
     }
     $('id-list').dataset.ids = key;
   }
+  if (force) paintLocal(raw.currentTime, true);
   updateFocus(); updateTimeline(); drawViewer();
 }
 
@@ -200,7 +213,7 @@ async function selectScene(index, { autoplay = false } = {}) {
   state.controller = new AbortController();
   raw.pause(); cipher.pause();
   state.scene = index; state.loading = true; state.ready = false; state.data = null;
-  state.frame = -1; state.idKey = null; state.focusedId = null; state.finished = false;
+  state.frame = -1; state.rawFrame = -1; state.idKey = null; state.focusedId = null; state.finished = false;
   state.completed.delete(index); state.positions.set(index, 0);
   $('error-banner').hidden = true; $('app').setAttribute('aria-busy', 'true');
   $('app').classList.add('is-loading'); $('app').classList.remove('scene-reveal');
@@ -212,9 +225,10 @@ async function selectScene(index, { autoplay = false } = {}) {
   $('seek').max = item.duration; $('seek').value = 0; $('seek').style.setProperty('--progress', '0%');
   $('current-time').textContent = '00:00'; $('duration').textContent = clock(item.duration);
   $('viewer-scene').textContent = item.id;
-  canvas.width = item.width * 2; canvas.height = item.height * 2;
-  viewerCanvas.width = item.width * 2; viewerCanvas.height = item.height * 2;
-  canvas.dataset.frameId = '';
+  for (const target of [canvas, localCanvas, viewerCanvas]) {
+    target.width = item.width * 2; target.height = item.height * 2;
+    target.dataset.frameId = '';
+  }
   $('track-count').textContent = '00'; $('id-list').replaceChildren();
   $('result-summary').textContent = '正在准备当前场景'; $('return-summary').textContent = '正在等待当前场景就绪';
   raw.poster = item.poster; cipher.poster = item.encryptedPoster;
@@ -287,7 +301,11 @@ function layoutFlows() {
   }
   if (state.theater && scene()) {
     const width = $('raw-surface').getBoundingClientRect().width;
-    const height = Math.max(220, Math.min(window.innerHeight - 310, width * scene().height / scene().width));
+    const panel = document.querySelector('.edge-panel').getBoundingClientRect();
+    const chrome = panel.height - $('raw-surface').offsetHeight - $('local-tracking-surface').offsetHeight;
+    const controls = $('inline-play-button').closest('.playback-bar');
+    const remaining = window.innerHeight - panel.top - controls.offsetHeight - parseFloat(getComputedStyle(controls).marginTop) - 28;
+    const height = Math.max(120, Math.min(Math.floor((remaining - chrome) / 2), width * scene().height / scene().width));
     $('demo-board').style.setProperty('--surface-height', `${height}px`);
   } else {
     $('demo-board').style.removeProperty('--surface-height');
@@ -295,14 +313,18 @@ function layoutFlows() {
   const board = $('demo-board').getBoundingClientRect();
   const edge = document.querySelector('.edge-panel').getBoundingClientRect();
   const server = document.querySelector('.server-panel').getBoundingClientRect();
-  const from = $('raw-surface').getBoundingClientRect(), to = $('cipher-surface').getBoundingClientRect();
+  const upper = $('raw-surface').getBoundingClientRect(), lower = $('local-tracking-surface').getBoundingClientRect();
   $('flow-overlay').setAttribute('viewBox', `0 0 ${board.width} ${board.height}`);
-  document.querySelector('.bridge-core').style.top = `${from.top - board.top + from.height * .49}px`;
-  for (const [prefix, fraction, forward] of [['uplink', .26, true], ['downlink', .79, false]]) {
+  document.querySelector('.bridge-core').style.top = `${(upper.bottom + lower.top) / 2 - board.top}px`;
+  for (const [prefix, fromId, toId, forward] of [
+    ['uplink', 'raw-surface', 'cipher-surface', true],
+    ['downlink', 'tracking-surface', 'local-tracking-surface', false],
+  ]) {
+    const from = $(fromId).getBoundingClientRect(), to = $(toId).getBoundingClientRect();
     const x1 = (forward ? edge.right : server.left) - board.left;
     const x2 = (forward ? server.left : edge.right) - board.left;
-    const y1 = from.top - board.top + from.height * fraction;
-    const y2 = to.top - board.top + to.height * fraction;
+    const y1 = from.top - board.top + from.height * .5;
+    const y2 = to.top - board.top + to.height * .5;
     const bend = (x2 - x1) * .45;
     const d = `M ${x1} ${y1} C ${x1 + bend} ${y1 - 10}, ${x2 - bend} ${y2 - 10}, ${x2} ${y2}`;
     const path = $(`${prefix}-path`); path.setAttribute('d', d);
@@ -349,7 +371,7 @@ $('seek').addEventListener('input', () => seek(Number($('seek').value)));
 window.addEventListener('pointerup', () => { if (!state.scrubbing) return; state.scrubbing = false; if (state.resumeAfterScrub) void play(); });
 window.addEventListener('pointercancel', () => { state.scrubbing = false; });
 raw.addEventListener('timeupdate', () => { if (state.ready) { syncCipher(); updateTimeline(); } });
-raw.addEventListener('seeked', () => { if (state.ready) { syncCipher(true); updateTimeline(); } });
+raw.addEventListener('seeked', () => { if (state.ready) { syncCipher(true); paintLocal(raw.currentTime, true); updateTimeline(); } });
 cipher.addEventListener('seeked', () => { if (state.ready) paint(cipher.currentTime, true); });
 cipher.addEventListener('loadeddata', () => { if (state.ready) paint(cipher.currentTime, true); });
 raw.addEventListener('ended', () => {
@@ -361,17 +383,23 @@ raw.addEventListener('ended', () => {
 if ('requestVideoFrameCallback' in cipher) {
   const nextFrame = (_now, metadata) => { paint(metadata.mediaTime); cipher.requestVideoFrameCallback(nextFrame); };
   cipher.requestVideoFrameCallback(nextFrame);
+  const nextRawFrame = (_now, metadata) => { paintLocal(metadata.mediaTime); raw.requestVideoFrameCallback(nextRawFrame); };
+  raw.requestVideoFrameCallback(nextRawFrame);
 } else {
-  const nextFrame = () => { if (state.playing) paint(); requestAnimationFrame(nextFrame); };
+  const nextFrame = () => { if (state.playing) { paint(); paintLocal(); } requestAnimationFrame(nextFrame); };
   requestAnimationFrame(nextFrame);
 }
-raw.addEventListener('timeupdate', () => { if (viewer.open && state.view === 'raw') drawViewer(); });
 for (const button of document.querySelectorAll('[data-view]')) {
   button.addEventListener('click', () => {
     if (!state.ready) return;
     state.view = button.dataset.view;
-    $('viewer-title').textContent = state.view === 'tracked' ? '加密画面 · 目标跟踪' : '摄像头原始画面';
-    $('viewer-description').textContent = state.view === 'tracked' ? '加密视频与真实目标框同步呈现' : '当前场景的原始画面';
+    const views = {
+      raw: ['摄像头原始画面', '当前场景的原始画面'],
+      'local-tracked': ['本地画面 · 跟踪结果', '回传的目标框与 ID 叠加在本地原始画面上'],
+      cipher: ['加密画面', '当前场景的实际选择性加密视频'],
+      tracked: ['加密画面 · 目标跟踪', '真实目标框与 ID 直接叠加在加密视频上'],
+    };
+    [$('viewer-title').textContent, $('viewer-description').textContent] = views[state.view];
     viewer.showModal(); drawViewer();
   });
 }

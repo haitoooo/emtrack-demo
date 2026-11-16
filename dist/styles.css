@@ -1,7 +1,7 @@
 :root {
   --bg: #f6f8fa; --paper: #fff; --ink: #162a40; --muted: #798797;
   --blue: #3169de; --green: #168b78; --line: #e0e7ee;
-  --surface-height: clamp(280px, 36vh, 410px);
+  --surface-height: clamp(190px, 23vh, 270px);
   font-family: Inter, "SF Pro Display", "PingFang SC", "Noto Sans SC", "Microsoft YaHei", system-ui, sans-serif;
   color: var(--ink); font-synthesis: none;
 }
@@ -81,21 +81,30 @@ h1 > span { color: var(--blue); }
 .target-count i { width: 4px; height: 4px; border-radius: 50%; background: #2fa18b; margin-right: 2px; }
 .target-count strong { font-size: 13px; font-variant-numeric: tabular-nums; font-weight: 700; }
 .video-card { margin: 0; min-width: 0; }
+.view-heading { height: 29px; display: flex; align-items: center; justify-content: space-between; gap: 10px; color: #71849a; font-size: 10px; }
+.view-heading > span { display: inline-flex; align-items: center; gap: 7px; }
+.view-heading > span:last-child { color: #9aa9b8; font-size: 8px; }
+.view-heading i { color: #9aafc6; font: 8px ui-monospace, SFMono-Regular, Consolas, monospace; }
+.view-heading svg { width: 10px; height: 10px; }
+.view-heading .result-caption { color: #7aa394 !important; gap: 4px; }
+.result-card { margin-top: 13px; }
 .video-surface { position: relative; width: 100%; height: var(--surface-height); overflow: hidden; background: #edf1f5; border-radius: 12px; border: 1px solid #e3eaf1; isolation: isolate; }
 .video-surface::after { content: ""; pointer-events: none; position: absolute; inset: 0; box-shadow: inset 0 0 28px #1f3f5810; border-radius: inherit; z-index: 3; }
-.video-surface video { display: block; width: 100%; height: 100%; object-fit: contain; }
+.video-surface video, .video-surface canvas { display: block; width: 100%; height: 100%; object-fit: contain; }
 .cipher-surface { background: #eaf1ef; border-color: #deebe5; }
-#tracking-canvas { position: absolute; pointer-events: none; inset: 0; width: 100%; height: 100%; object-fit: contain; z-index: 1; }
+.result-surface { border-color: #dce8e2; }
+.video-surface canvas { pointer-events: none; }
 .media-tag { position: absolute; z-index: 3; top: 12px; left: 12px; padding: 6px 8px; display: inline-flex; align-items: center; gap: 6px; color: #60768d; background: #ffffffeb; border: 1px solid #ffffffb3; border-radius: 6px; backdrop-filter: blur(10px); font: 8px ui-monospace, SFMono-Regular, Consolas, monospace; letter-spacing: 1px; }
 .media-tag svg { width: 11px; height: 11px; }
 .record-dot { width: 4px; height: 4px; border-radius: 50%; background: #ce8f87; }
 .cipher-tag { color: #408d7c; font-family: inherit; font-size: 9px; letter-spacing: .3px; }
+.result-tag { color: #408d7c; font-family: inherit; font-size: 9px; letter-spacing: .3px; }
 .surface-caption { position: absolute; z-index: 3; bottom: 15px; left: 14px; color: #8194a9; font: 7px ui-monospace, SFMono-Regular, Consolas, monospace; letter-spacing: 2px; writing-mode: vertical-rl; transform: rotate(180deg); }
 .cipher-caption { color: #648e83; }
 .expand-button { position: absolute; z-index: 4; bottom: 11px; right: 11px; display: grid; place-items: center; width: 29px; height: 29px; border: 1px solid #ffffffc0; border-radius: 7px; color: #74899e; background: #ffffffd9; backdrop-filter: blur(10px); }
 .expand-button svg { width: 14px; height: 14px; }
 .expand-button:hover { color: var(--blue); background: #fff; transform: scale(1.05); }
-.monitor-footer { min-height: 82px; }
+.monitor-footer { min-height: 72px; }
 .local-footer { display: flex; align-items: center; gap: 10px; }
 .receipt-icon { height: 28px; width: 28px; display: grid; place-items: center; border: 1px solid #dcece6; border-radius: 50%; background: #f7fbf9; color: #2a9c84; }
 .receipt-icon svg { width: 13px; height: 13px; }
@@ -148,7 +157,7 @@ h1 > span { color: var(--blue); }
 .loader-ring { width: 15px; height: 15px; border: 1.5px solid #cedbec; border-top-color: #608bd4; border-radius: 50%; animation: spin 1s linear infinite; }
 .cipher-loading { position: absolute; z-index: 5; inset: 0; background: #eaf1efe6; display: none; align-items: center; justify-content: center; backdrop-filter: blur(3px); }
 .is-loading .cipher-loading { display: flex; }
-.scene-reveal .video-surface video { animation: reveal .45s ease-out both; }
+.scene-reveal .video-surface video, .scene-reveal .video-surface canvas { animation: reveal .45s ease-out both; }
 .playback-bar { display: flex; align-items: center; gap: 17px; margin-top: 22px; min-height: 66px; padding: 9px 21px; border: 1px solid #dfe7ef; background: #ffffffd9; backdrop-filter: blur(18px); border-radius: 17px; box-shadow: 0 7px 24px #25446703; }
 .skip-controls { display: flex; align-items: center; gap: 5px; }
 .icon-button { width: 29px; height: 30px; display: grid; place-items: center; border: 0; border-radius: 7px; background: transparent; color: #728aa6; }
@@ -214,7 +223,7 @@ kbd { font: 8px ui-monospace, SFMono-Regular, Consolas, monospace; border: 1px s
 .viewer-footer { padding: 12px 22px; display: flex; align-items: center; justify-content: space-between; gap: 15px; color: #8b9aab; font-size: 10px; }
 .viewer-play { border: 1px solid #dbe5f3; border-radius: 7px; background: #f4f7fc; padding: 7px 11px; color: #5b7ca9; display: inline-flex; align-items: center; gap: 5px; font-size: 10px; }
 .viewer-play svg { width: 12px; height: 12px; }
-.is-theater { --surface-height: clamp(330px,calc(100vh - 350px),740px); }
+.is-theater { --surface-height: clamp(150px,calc((100vh - 350px) / 2),500px); }
 .is-theater .hero, .is-theater .playlist-section, .is-theater .page-footer { display: none; }
 .is-theater .site-header { height: 57px; }
 .is-theater .app-shell { padding-top: 20px; }
@@ -323,6 +332,9 @@ kbd { font: 8px ui-monospace, SFMono-Regular, Consolas, monospace; border: 1px s
   .target-count strong { font-size: 12px; }
   .target-count i { width: 3px; height: 3px; margin-right: 1px; }
   .video-surface { border-radius: 10px; }
+  .view-heading { font-size: 9px; height: 28px; }
+  .view-heading > span:last-child { font-size: 7px; }
+  .result-card { margin-top: 10px; }
   .media-tag { left: 8px; top: 8px; padding: 5px 6px; font-size: 7px; }
   .cipher-tag { font-size: 8px; }
   .surface-caption { left: 8px; bottom: 11px; font-size: 6px; letter-spacing: 1.5px; }

@@ -4,11 +4,11 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#f6f8fa">
-  <meta name="description" content="原始画面与加密跟踪同步呈现。八个真实场景依次播放，直观看见加密画面中的目标。">
+  <meta name="description" content="本地与服务器，四个画面同步呈现采集、加密与跟踪。八个真实场景依次播放。">
   <title>EM-Track · 画面加密，目标依然清晰</title>
   <link rel="icon" type="image/svg+xml" href="icon.svg">
-  <link rel="stylesheet" href="styles.css?v=showcase-2">
-  <script type="module" src="app.js?v=showcase-2"></script>
+  <link rel="stylesheet" href="styles.css?v=four-views-3">
+  <script type="module" src="app.js?v=four-views-3"></script>
 </head>
 <body>
   <svg class="icon-definitions" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
@@ -43,14 +43,15 @@
 
     <section class="scene-toolbar" aria-label="当前演示">
       <div class="scene-heading"><span class="scene-number" id="scene-number">01 / 08</span><h2 id="scene-title">室内场景 01</h2><span class="scene-code" id="scene-code">I_BS_01</span></div>
-      <div class="scene-actions"><span class="sync-status"><span></span>双端同步</span><button class="text-button" type="button" id="theater-button" aria-pressed="false"><svg><use href="#i-expand"/></svg><span>演示模式</span></button></div>
+      <div class="scene-actions"><span class="sync-status"><span></span>四画面同步</span><button class="text-button" type="button" id="theater-button" aria-pressed="false"><svg><use href="#i-expand"/></svg><span>演示模式</span></button></div>
     </section>
     <div class="error-banner" id="error-banner" role="alert" hidden><span id="error-message"></span><button type="button" id="retry-button">重新加载</button></div>
 
-    <section class="demo-board" id="demo-board" aria-label="本地原始视频与服务器加密跟踪">
+    <section class="demo-board" id="demo-board" aria-label="本地与服务器四画面同步演示">
       <section class="endpoint edge-panel" aria-labelledby="edge-heading">
-        <div class="endpoint-header"><span class="endpoint-icon"><svg><use href="#i-camera"/></svg></span><div><span class="endpoint-eyebrow">01 / LOCAL CAMERA</span><h3 id="edge-heading">摄像头原始画面</h3></div><span class="endpoint-badge">本地端</span></div>
-        <figure class="video-card" id="raw-card"><div class="video-surface" id="raw-surface"><video id="raw-video" muted playsinline preload="auto" disablepictureinpicture aria-label="当前场景的原始视频"></video><span class="media-tag"><span class="record-dot"></span><span id="camera-label">CAM 01</span></span><span class="surface-caption">ORIGINAL</span><button class="expand-button" type="button" data-view="raw" aria-label="放大原始视频"><svg><use href="#i-expand"/></svg></button><div class="media-loader" id="media-loader"><span class="loader-ring"></span><span>正在准备画面</span></div></div><figcaption class="sr-only">摄像头原始视频，与右侧加密跟踪同步播放。</figcaption></figure>
+        <div class="endpoint-header"><span class="endpoint-icon"><svg><use href="#i-camera"/></svg></span><div><span class="endpoint-eyebrow">01 / LOCAL DEVICE</span><h3 id="edge-heading">采集与结果回显</h3></div><span class="endpoint-badge">本地端</span></div>
+        <figure class="video-card" id="raw-card"><figcaption class="view-heading"><span><i>01</i>摄像头原始视频</span><span>采集</span></figcaption><div class="video-surface" id="raw-surface"><video id="raw-video" muted playsinline preload="auto" disablepictureinpicture aria-label="当前场景的原始视频"></video><span class="media-tag"><span class="record-dot"></span><span id="camera-label">CAM 01</span></span><span class="surface-caption">ORIGINAL</span><button class="expand-button" type="button" data-view="raw" aria-label="放大原始视频"><svg><use href="#i-expand"/></svg></button><div class="media-loader" id="media-loader"><span class="loader-ring"></span><span>正在准备画面</span></div></div></figure>
+        <figure class="video-card result-card" id="local-tracking-card"><figcaption class="view-heading"><span><i>04</i>本地跟踪视频</span><span class="result-caption"><svg><use href="#i-check"/></svg>回传叠加</span></figcaption><div class="video-surface result-surface" id="local-tracking-surface"><canvas id="local-tracking-canvas" width="704" height="576" aria-label="本地原始视频叠加回传的真实跟踪框与 ID" data-source="original"></canvas><span class="media-tag result-tag"><svg><use href="#i-target"/></svg>跟踪结果</span><span class="surface-caption">LOCAL RESULT</span><button class="expand-button" type="button" data-view="local-tracked" aria-label="放大本地跟踪画面"><svg><use href="#i-expand"/></svg></button><div class="cipher-loading" aria-hidden="true"><span class="loader-ring"></span></div></div></figure>
         <div class="monitor-footer local-footer"><span class="receipt-icon"><svg><use href="#i-check"/></svg></span><div><p class="footer-label">跟踪结果已返回本地</p><p class="return-summary" id="return-summary">当前场景就绪后开始回放</p></div><span class="receipt-indicator" aria-hidden="true"><i></i><i></i><i></i><i></i></span></div>
       </section>
 
@@ -59,8 +60,9 @@
       <span class="flow-label uplink-label" id="uplink-label"><svg><use href="#i-lock"/></svg>加密上传</span><span class="flow-label downlink-label" id="downlink-label"><svg><use href="#i-target"/></svg>位置返回</span>
 
       <section class="endpoint server-panel" aria-labelledby="server-heading">
-        <div class="endpoint-header"><span class="endpoint-icon server-icon"><svg><use href="#i-server"/></svg></span><div><span class="endpoint-eyebrow">02 / ENCRYPTED TRACKING</span><h3 id="server-heading">加密画面，直接跟踪</h3></div><span class="target-count"><i></i><strong id="track-count">0</strong><span>个目标</span></span></div>
-        <figure class="video-card" id="cipher-card"><div class="video-surface cipher-surface" id="cipher-surface"><video id="cipher-video" muted playsinline preload="auto" disablepictureinpicture aria-label="当前场景的实际加密视频"></video><canvas id="tracking-canvas" width="704" height="576" aria-label="直接叠加在加密视频上的实际目标框与 ID" data-source="encrypted"></canvas><span class="media-tag cipher-tag"><svg><use href="#i-lock"/></svg>选择性加密</span><span class="surface-caption cipher-caption">ENCRYPTED + TRACKED</span><button class="expand-button" type="button" data-view="tracked" aria-label="放大加密跟踪画面"><svg><use href="#i-expand"/></svg></button><div class="cipher-loading" aria-hidden="true"><span class="loader-ring"></span></div></div><figcaption class="sr-only">真实跟踪框和目标 ID 直接叠加在加密视频上。</figcaption></figure>
+        <div class="endpoint-header"><span class="endpoint-icon server-icon"><svg><use href="#i-server"/></svg></span><div><span class="endpoint-eyebrow">02 / CLOUD SERVER</span><h3 id="server-heading">加密接收与跟踪</h3></div><span class="target-count"><i></i><strong id="track-count">0</strong><span>个目标</span></span></div>
+        <figure class="video-card" id="cipher-card"><figcaption class="view-heading"><span><i>02</i>加密视频</span><span>加密接收</span></figcaption><div class="video-surface cipher-surface" id="cipher-surface"><video id="cipher-video" muted playsinline preload="auto" disablepictureinpicture aria-label="当前场景的实际加密视频"></video><span class="media-tag cipher-tag"><svg><use href="#i-lock"/></svg>选择性加密</span><span class="surface-caption cipher-caption">ENCRYPTED</span><button class="expand-button" type="button" data-view="cipher" aria-label="放大加密视频"><svg><use href="#i-expand"/></svg></button><div class="cipher-loading" aria-hidden="true"><span class="loader-ring"></span></div></div></figure>
+        <figure class="video-card result-card" id="tracking-card"><figcaption class="view-heading"><span><i>03</i>加密跟踪视频</span><span class="result-caption"><svg><use href="#i-target"/></svg>目标框与 ID</span></figcaption><div class="video-surface cipher-surface result-surface" id="tracking-surface"><canvas id="tracking-canvas" width="704" height="576" aria-label="实际加密视频叠加真实目标框与 ID" data-source="encrypted"></canvas><span class="media-tag cipher-tag result-tag"><svg><use href="#i-target"/></svg>加密画面叠框</span><span class="surface-caption cipher-caption">ENCRYPTED + TRACKED</span><button class="expand-button" type="button" data-view="tracked" aria-label="放大加密跟踪画面"><svg><use href="#i-expand"/></svg></button><div class="cipher-loading" aria-hidden="true"><span class="loader-ring"></span></div></div></figure>
         <div class="monitor-footer server-footer"><div class="result-topline"><span class="footer-label" id="result-summary">本帧目标</span><span class="ready-badge" id="result-state"><i></i><span>等待播放</span></span><button type="button" class="overlay-toggle" id="overlay-toggle" aria-pressed="true" aria-label="显示目标框"><svg><use href="#i-eye"/></svg><span>目标框</span><i></i></button></div><div class="id-list" id="id-list" aria-label="点击目标 ID 高亮对应的跟踪框"><span class="empty-result">等待目标进入画面</span></div></div>
       </section>
     </section>
