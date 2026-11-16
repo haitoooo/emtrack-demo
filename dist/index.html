@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f4f7fb">
+  <meta name="description" content="逐段播放八个场景，直观看到本地视频、加密上传、服务器处理和跟踪结果回传。">
+  <title>EM-Track · 端云协同演示</title>
+  <link rel="icon" type="image/svg+xml" href="icon.svg">
+  <link rel="stylesheet" href="styles.css">
+  <script type="module" src="app.js"></script>
+</head>
+<body>
+  <svg class="icon-definitions" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+    <symbol id="i-camera" viewBox="0 0 24 24"><path d="M4 7h10a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2Z"/><path d="m16 11 6-3v10l-6-3M6 7l1-3h5l1 3"/></symbol>
+    <symbol id="i-server" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="7" rx="2"/><rect x="3" y="14" width="18" height="7" rx="2"/><path d="M16 6.5h1M16 17.5h1M7 6.5h4M7 17.5h4"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="11" rx="3"/><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7Z"/></symbol>
+    <symbol id="i-pause" viewBox="0 0 24 24"><path d="M8 5v14M16 5v14"/></symbol>
+    <symbol id="i-next" viewBox="0 0 24 24"><path d="m5 6 10 6-10 6ZM19 5v14"/></symbol>
+    <symbol id="i-prev" viewBox="0 0 24 24"><path d="m19 6-10 6 10 6ZM5 5v14"/></symbol>
+    <symbol id="i-expand" viewBox="0 0 24 24"><path d="M8 3H3v5M16 3h5v5M21 16v5h-5M3 16v5h5"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M4 12h16m-6-6 6 6-6 6"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol>
+    <symbol id="i-target" viewBox="0 0 24 24"><path d="M8 3H3v5M16 3h5v5M21 16v5h-5M3 16v5h5"/><rect x="8" y="7" width="8" height="11" rx="2"/></symbol>
+  </svg>
+
+  <header class="site-header">
+    <div class="brand"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span><span>EM<span class="brand-hyphen">-</span>Track<span class="version">v2</span></span></div>
+    <span class="header-caption">端云协同 · 可视化演示</span>
+    <div class="header-status"><span class="status-dot"></span>演示回放</div>
+  </header>
+
+  <main class="app-shell" id="app" aria-busy="true">
+    <section class="scene-toolbar" aria-label="当前演示">
+      <div class="scene-heading">
+        <div class="eyebrow"><span id="scene-number">01 / 08</span><span class="eyebrow-line"></span><span>按顺序播放八段场景</span></div>
+        <div class="scene-title-row"><h1 id="scene-title">室内场景 01</h1><span class="scene-code" id="scene-code">I_BS_01</span></div>
+      </div>
+      <div class="toolbar-actions"><span class="play-hint" id="play-hint">点击播放，看看视频如何完成一次协同跟踪</span><button class="primary-button" id="play-button" type="button" disabled><svg><use href="#i-play"/></svg><span>准备中</span></button></div>
+    </section>
+
+    <div class="error-banner" id="error-banner" role="alert" hidden><span id="error-message"></span><button type="button" id="retry-button">重新加载</button></div>
+
+    <section class="demo-board" id="demo-board" aria-label="本地与服务器演示">
+      <section class="endpoint edge-panel" aria-labelledby="edge-heading">
+        <div class="endpoint-header"><span class="endpoint-icon edge-icon"><svg><use href="#i-camera"/></svg></span><div><h2 id="edge-heading">本地端 <span>LOCAL</span></h2><p>采集画面，接收跟踪结果</p></div><span class="subtle-badge"><svg><use href="#i-lock"/></svg>密钥留在本地</span></div>
+
+        <figure class="video-card" id="raw-card">
+          <figcaption><span class="video-label"><i class="blue-dot"></i>摄像头原始视频</span><span class="figure-meta">原始画面</span></figcaption>
+          <div class="video-surface" id="raw-surface"><video id="raw-video" muted playsinline preload="auto" disablepictureinpicture aria-label="当前场景的原始视频"></video><span class="media-tag"><span class="record-dot"></span>CAM 01</span><button class="expand-button" type="button" data-view="raw" aria-label="放大原始视频"><svg><use href="#i-expand"/></svg></button><div class="media-loader" id="media-loader"><span></span><span>正在准备画面</span></div></div>
+        </figure>
+
+        <div class="local-handoff"><svg><use href="#i-lock"/></svg><span>本地加密后上传</span><span class="handoff-dots" aria-hidden="true">···</span><span>结果返回后叠加</span><svg><use href="#i-target"/></svg></div>
+
+        <figure class="video-card tracked-card" id="tracked-card">
+          <figcaption><span class="video-label"><i class="green-dot"></i>处理后的跟踪视频</span><span class="count-badge"><strong id="track-count">0</strong> 个目标</span></figcaption>
+          <div class="video-surface" id="tracked-surface"><canvas id="tracking-canvas" width="704" height="576" aria-label="根据实际回传结果绘制的目标ID、边界框和轨迹"></canvas><span class="media-tag result-tag"><svg><use href="#i-check"/></svg>本地叠加</span><button class="expand-button" type="button" data-view="tracked" aria-label="放大跟踪视频"><svg><use href="#i-expand"/></svg></button></div>
+        </figure>
+      </section>
+
+      <svg class="flow-overlay" id="flow-overlay" aria-hidden="true"><defs><marker id="arrow-blue" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 10 5 0 10Z" fill="#4f7fd7"/></marker><marker id="arrow-green" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 10 5 0 10Z" fill="#279a83"/></marker></defs><path id="uplink-path" class="flow-line uplink-line" marker-end="url(#arrow-blue)"/><path id="downlink-path" class="flow-line downlink-line" marker-end="url(#arrow-green)"/></svg>
+      <span class="flow-label uplink-label" id="uplink-label"><svg><use href="#i-lock"/></svg><span>加密码流</span></span>
+      <span class="flow-label downlink-label" id="downlink-label"><svg><use href="#i-target"/></svg><span>跟踪结果</span></span>
+
+      <section class="endpoint server-panel" aria-labelledby="server-heading">
+        <div class="endpoint-header"><span class="endpoint-icon server-icon"><svg><use href="#i-server"/></svg></span><div><h2 id="server-heading">服务器端 <span>SERVER</span></h2><p>接收加密码流，返回目标位置</p></div><span class="subtle-badge server-badge">协同处理</span></div>
+
+        <figure class="video-card cipher-card" id="cipher-card">
+          <figcaption><span class="video-label"><i class="purple-dot"></i>加密画面预览</span><span class="figure-meta"><svg><use href="#i-lock"/></svg>选择性加密</span></figcaption>
+          <div class="video-surface cipher-surface" id="cipher-surface"><video id="cipher-video" muted playsinline preload="auto" disablepictureinpicture aria-label="同一帧的实际加密码流可视化"></video><span class="media-tag cipher-tag"><svg><use href="#i-lock"/></svg>ENCRYPTED</span><button class="expand-button" type="button" data-view="cipher" aria-label="放大加密画面"><svg><use href="#i-expand"/></svg></button></div>
+        </figure>
+
+        <div class="server-route" aria-label="处理流程示意"><span class="route-step" data-step="0"><span class="step-dot">1</span>加密上传</span><svg><use href="#i-arrow"/></svg><span class="route-step" data-step="1"><span class="step-dot">2</span>服务器处理</span><svg><use href="#i-arrow"/></svg><span class="route-step" data-step="2"><span class="step-dot">3</span>结果回传</span></div>
+
+        <section class="server-result" id="server-result" aria-label="返回本地的结果">
+          <div class="result-topline"><h3>跟踪结果<span class="result-caption">回到本地</span></h3><span class="ready-badge" id="result-state"><span></span>等待播放</span></div>
+          <div class="result-body">
+            <div class="server-illustration" aria-hidden="true"><span class="server-orbit orbit-one"></span><span class="server-orbit orbit-two"></span><svg class="cloud-machine" viewBox="0 0 160 146" fill="none"><path d="M42 62a22 22 0 0 1-1-44 30 30 0 0 1 57-2 23 23 0 0 1 22 46" stroke="#c2d4ed" stroke-width="2" stroke-linecap="round"/><path d="M80 35v24m-6-6 6 6 6-6" stroke="#6c94d1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><rect x="32" y="69" width="96" height="27" rx="9" fill="#fff" stroke="#bfd2ed" stroke-width="2"/><rect x="32" y="105" width="96" height="27" rx="9" fill="#fff" stroke="#bfd2ed" stroke-width="2"/><path d="M47 82h31m-31 36h31" stroke="#b3c9e8" stroke-width="3" stroke-linecap="round"/><circle cx="111" cy="82" r="4" fill="#4383d5"/><circle cx="111" cy="118" r="4" fill="#3baa92"/></svg><span class="server-spark spark-one"></span><span class="server-spark spark-two"></span></div>
+            <div class="result-details"><p class="result-eyebrow" id="result-summary">画面就绪后即可开始</p><div class="result-number"><strong id="result-count">0</strong><span>个目标</span></div><div class="id-list" id="id-list"><span class="empty-result">等待目标进入画面</span></div><p class="result-description">返回目标 ID 和位置<br>在本地原画面上绘制轨迹</p></div>
+          </div>
+          <div class="result-footer"><svg><use href="#i-check"/></svg><span id="return-summary">当前场景的实际回传结果</span><span class="small-wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span></div>
+        </section>
+      </section>
+    </section>
+
+    <section class="playback-bar" aria-label="播放控制"><div class="skip-controls"><button class="icon-button" id="prev-button" type="button" aria-label="上一段" disabled><svg><use href="#i-prev"/></svg></button><button class="icon-button inline-play-button" id="inline-play-button" type="button" aria-label="播放当前视频" disabled><svg><use href="#i-play"/></svg></button><button class="icon-button" id="next-button" type="button" aria-label="下一段" disabled><svg><use href="#i-next"/></svg></button></div><span class="time-display" id="current-time">00:00</span><label class="seek-label"><span class="sr-only">当前视频播放进度</span><input id="seek" type="range" min="0" max="11" step="0.04" value="0" aria-label="当前视频播放进度" disabled></label><span class="time-display duration" id="duration">00:11</span><span class="playback-divider"></span><label class="speed-label"><span class="sr-only">播放速度</span><select id="speed" aria-label="播放速度"><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="1.5">1.5×</option><option value="2">2×</option></select></label><label class="auto-next"><input type="checkbox" id="auto-next" checked><span class="switch-track" aria-hidden="true"></span><span>自动下一段</span></label></section>
+
+    <section class="playlist-section" aria-labelledby="playlist-heading"><div class="playlist-heading"><h2 id="playlist-heading">播放列表 <span>依次观看 8 个场景</span></h2><span id="total-duration">总时长 01:47</span></div><nav class="playlist" id="playlist" aria-label="场景播放列表"></nav></section>
+    <footer class="page-footer"><p><span class="info-dot">i</span>使用已记录的实际加密与跟踪结果回放。加密画面为本地可视化，服务器处理加密码流。</p><span>EM-Trackv2</span></footer>
+    <div class="sr-only" id="announcer" aria-live="polite"></div>
+  </main>
+
+  <dialog id="viewer" class="viewer-dialog" aria-labelledby="viewer-title"><div class="viewer-heading"><h2 id="viewer-title">画面预览</h2><button class="icon-button" id="close-viewer" aria-label="关闭放大预览" type="button"><svg><use href="#i-close"/></svg></button></div><div class="viewer-surface"><canvas id="viewer-canvas" width="704" height="576"></canvas></div><div class="viewer-footer"><span id="viewer-scene">I_BS_01</span><button type="button" id="viewer-play" class="viewer-play">播放 / 暂停</button></div></dialog>
+</body>
+</html>
