@@ -5,7 +5,6 @@ import argparse
 import hashlib
 import json
 from pathlib import Path
-import shutil
 import subprocess
 
 NAMES = ("I_BS_01", "I_BS_02", "I_MB_02", "I_MC_02", "I_SI_02", "O_CL_02", "O_MC_01", "O_RA_02")
@@ -34,7 +33,8 @@ def prepare(recordings):
             run(["ffmpeg", "-v", "error", "-nostdin", "-y", "-fflags", "+genpts", "-r", str(m["fps"]),
                  "-i", m["video"], "-an", "-c:v", "copy", "-movflags", "+faststart", str(original)])
         cipher = target / "encrypted.mp4"
-        shutil.copyfile(source / "edge/cipher_preview.mp4", cipher)
+        run(["ffmpeg", "-v", "error", "-nostdin", "-y", "-i", str(source / "edge/cipher_preview.mp4"),
+             "-map", "0:v:0", "-an", "-c:v", "copy", "-movflags", "+faststart", str(cipher)])
         for video, poster in ((original, "poster.jpg"), (cipher, "encrypted-poster.jpg")):
             probe = json.loads(subprocess.check_output([
                 "ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries",
