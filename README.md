@@ -2,9 +2,9 @@
 
 在线演示：[打开 EM-Track demo](https://haitoooo.github.io/emtrack-demo/)。
 
-浅色的本地端／服务器端双栏：左侧上下播放当前场景的原始画面与跟踪画面，右侧展示加密画面、简洁的处理流程和实际返回的目标 ID。八段场景默认依次播放，总源时长 107 秒；每次只展示一路。
+浅色的双画面演示台：左侧是摄像头原始视频，右侧直接在加密视频上叠加真实跟踪框与目标 ID。两侧同步播放，以动态虚线呈现加密上传和位置返回。八段场景默认依次播放，总源时长 107 秒；每次只展示一路。
 
-支持播放／暂停、拖动进度、上一段／下一段、直接选择场景、倍速、自动切换、画面放大和手机布局。页面不展示特征图、匹配分数、参数或 JSON。原始视频和加密视频保持同步，跟踪框与轨迹由已经记录的 HTTP 结果绘制。
+支持播放／暂停、拖动进度、上一段／下一段、场景缩略时间轴、倍速、自动切换、画面放大和手机布局。可以点击目标 ID 高亮对应的框、开关目标框，或进入演示模式放大双画面。空格播放／暂停，F 切换演示模式，Escape 退出。跟踪框与加密视频的实际显示帧对应，放大预览仍使用加密视频作为底图。页面不展示特征图、匹配分数、参数或 JSON。
 
 ```bash
 cd web_demo
@@ -31,8 +31,11 @@ DEMO_TEST_URL=http://127.0.0.1:4173/emtrack-demo/ npm test
 # 在原项目内，核对浏览器素材与实际 HTTP 结果。
 python scripts/check_media.py
 
-# 有 Playwright 浏览器时，检查交互与响应式布局。
+# 有 Playwright 浏览器时，检查加密底图、真实叠框、全部八段和响应式布局。
 npm test
+
+# 线上检查允许更长的网络等待时间。
+DEMO_TEST_URL=https://haitoooo.github.io/emtrack-demo/ DEMO_TEST_TIMEOUT_MS=90000 npm test
 
 # 原始记录更新时重新准备网页素材，不会重新训练或推理。
 python scripts/prepare_media.py --recordings ../runs/demo_eight_20261024
